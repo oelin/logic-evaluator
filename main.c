@@ -1,100 +1,74 @@
-#include "grammar.h"
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 
+#include "grammar.h"
 
 void *evaluateProposition(void *matchedProposition) {
+  bool *value = (bool *)calloc(1, sizeof(bool));
 
-        bool *value = (bool *) calloc(1, sizeof(bool));
+  if (*((char *)matchedProposition) == 'T') {
+    *value = true;
+  } else {
+    *value = false;
+  }
 
-        if ( *((char *) matchedProposition) == 'T') {
-                *value = true;
-        } else {
-                *value = false;
-        }
-
-        return value;
+  return value;
 }
 
-
 void *evaluateBinaryExpression(Tree *tree) {
+  Tree *r = tree->right;
+  Tree *rr = r->right;
+  Tree *rrr = rr->right;
+  Tree *rl = r->left;
+  Tree *rrl = rr->left;
+  Tree *rrrl = rrr->left;
 
-        Tree *r = tree->right;
-        Tree *rr = r->right;
-        Tree *rrr = rr->right;
-        Tree *rl = r->left;
-        Tree *rrl = rr->left;
-        Tree *rrrl = rrr->left;
+  bool lhs = *((bool *)rl);
+  bool rhs = *((bool *)rrrl);
+  char opr = *((char *)rrl);
 
-        bool lhs = *((bool *) rl);
-        bool rhs = *((bool *) rrrl);
-        char opr = *((char *) rrl);
+  bool *value = (bool *)calloc(1, sizeof(bool));
 
-        bool *value = (bool *) calloc(1, sizeof(bool));
+  if (opr == '^') {
+    *value = lhs && rhs;
+  } else if (opr == 'v') {
+    *value = rhs || lhs;
+  } else {
+    printf("unknown operator\n");
+  }
 
-        if (opr == '^') {
-                *value = lhs && rhs;
-        } else if (opr == 'v') {
-                *value = rhs || lhs;
-        } else {
-                printf("unknown operator\n");
-        }
-
-        return value;
+  return value;
 }
 
 void main() {
+  Variable(Proposition);
+  Variable(UnaryOperator);
+  Variable(BinaryOperator);
+  Variable(UnaryExpression);
+  Variable(BinaryExpression);
+  Variable(Expression);
 
-Variable(Proposition);
-Variable(UnaryOperator);
-Variable(BinaryOperator);
-Variable(UnaryExpression);
-Variable(BinaryExpression);
-Variable(Expression);
+  // Production rules.
 
-// Production rules.
+  Production(Proposition, Map(evaluateProposition, Match("[TF]")));
 
-Production(Proposition, Map(
-        evaluateProposition,
-        Match("[TF]")
-));
+  Production(UnaryOperator, Match("¬"));
 
-Production(UnaryOperator, Match("¬"));
+  Production(BinaryOperator, Match("[\\^v]"));
 
-Production(BinaryOperator, Match("[\\^v]"));
+  Production(UnaryExpression, And(UnaryOperator, Expression));
 
-Production(UnaryExpression, And(
-  UnaryOperator,
-  Expression
-));
+  Production(BinaryExpression,
+             Map(evaluateBinaryExpression,
+                 And(Match("\\("),
+                     And(Expression,
+                         And(BinaryOperator, And(Expression, Match("\\)")))))));
 
-Production(BinaryExpression, Map(
-  evaluateBinaryExpression,
-  And(
-    Match("\\("),
-    And(
-      Expression,
-      And(
-        BinaryOperator,
-        And(
-          Expression,
-          Match("\\)")
-        )
-      )
-    )
-)));
+  Production(Expression,
+             Or(Proposition, Or(UnaryExpression, BinaryExpression)));
 
-Production(Expression, Or(
-  Proposition,
-  Or(
-    UnaryExpression,
-    BinaryExpression
-  )
-));
-
-        //@chatgpt
-
-while (1) {
+  //@chatgpt
+  while (true) {
     printf("> ");
 
     // Read user input from the console
@@ -108,11 +82,11 @@ while (1) {
     Tree *result = parseTree(Expression, parse);
 
     if (result == NULL) {
-        // Parsing failed
-        printf("error: Syntax error.\n");
+      // Parsing failed
+      printf("error: Syntax error.\n");
     } else {
-        //parsePrint(result);
-        printf("< %s\n", *((bool *) result->right) ? "T" : "F");
+      // parsePrint(result);
+      printf("< %s\n", *((bool *)result->right) ? "T" : "F");
     }
-}
+  }
 }
